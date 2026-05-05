@@ -153,3 +153,10 @@ Se ha conseguido replicar una arquitectura completa en local sin depender de ser
 ## Autor
 
 Ethan RS
+
+
+
+
+# AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa, por fin coño, joder que puto asco
+
+![alt text](image.png)
