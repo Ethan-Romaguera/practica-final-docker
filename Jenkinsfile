@@ -12,14 +12,14 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Construyendo la imagen Docker de la API...'
-                sh 'docker compose build api'
+                sh 'docker-compose build api'
             }
         }
 
         stage('Test') {
             steps {
                 echo 'Levantando servicios para pruebas...'
-                sh 'docker compose up -d'
+                sh 'docker-compose up -d'
 
                 echo 'Esperando a que la API arranque...'
                 sh 'sleep 10'
@@ -32,7 +32,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo 'Desplegando entorno completo...'
-                sh 'docker compose up -d --build'
+                sh 'docker-compose up -d --build'
             }
         }
     }
@@ -44,7 +44,7 @@ pipeline {
 
         failure {
             echo 'La pipeline ha fallado. Revisar logs de Jenkins.'
-            sh 'docker compose logs --tail=100'
+            sh 'docker-compose logs --tail=100 || true'
         }
     }
 }
