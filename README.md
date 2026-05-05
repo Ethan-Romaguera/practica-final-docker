@@ -1,161 +1,273 @@
-# Práctica Final ISO — Infraestructura Dockerizada con CI/CD
+# Práctica Final ISO – Docker + CI/CD con Jenkins
 
 ## Descripción
 
-Este proyecto implementa una arquitectura completa basada en contenedores Docker, sustituyendo servicios cloud (MongoDB Atlas y Azure Blob Storage) por servicios autocontenidos.
+Este proyecto consiste en una aplicación completa desplegada con Docker que incluye:
 
-La aplicación consiste en una API REST desarrollada en Node.js que permite gestionar productos con imágenes almacenadas en un servidor Nginx.
-
----
-
-## Arquitectura
-
-Cliente (curl/Postman)
-│
-▼
-API REST (Node.js)
-│
-▼
-MongoDB
-│
-▼
-Nginx (servidor de imágenes)
-
-Todos los servicios se ejecutan dentro de una red Docker local utilizando Docker Compose.
+* API REST en Node.js
+* Base de datos MongoDB
+* Servidor Nginx para imágenes
+* Orquestación con Docker Compose
+* Integración continua con Jenkins
 
 ---
 
-## Tecnologías utilizadas
+# Cómo levantar el entorno manualmente
 
-* Node.js (Express)
-* MongoDB
-* Nginx
-* Docker
-* Docker Compose
-* Jenkins (CI/CD)
-
----
-
-## Cómo ejecutar el proyecto
-
-### 1. Clonar el repositorio
+## 1. Clonar el repositorio
 
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/Ethan-Romaguera/practica-final-docker.git
 cd practica-final-docker
 ```
 
-### 2. Configurar variables de entorno
+## 2. Crear archivo `.env`
 
-Crear un archivo `.env` basado en `.env.example`:
-
-```env
+```bash
 PORT=3000
 MONGO_URI=mongodb://mongo:27017/practica_final
 ```
 
-### 3. Levantar el entorno
+## 3. Construir y levantar contenedores
 
 ```bash
 docker compose up -d --build
 ```
 
-### 4. Comprobar funcionamiento
+## 4. Comprobar funcionamiento
+
+### API
 
 ```bash
 curl http://localhost:3000/health
 ```
 
----
-
-## Flujo de funcionamiento
-
-1. El usuario sube una imagen al servidor Nginx.
-2. La API guarda la URL de la imagen en MongoDB.
-3. El cliente recupera los datos desde la API.
-4. El navegador carga la imagen desde Nginx usando la URL.
-
----
-
-## Endpoints principales
-
-### Obtener todos los productos
-
-```bash
-GET /api/products
-```
-
-### Crear producto
-
-```bash
-POST /api/products
-```
-
-Ejemplo de body:
+Respuesta esperada:
 
 ```json
-{
-  "name": "Producto Docker",
-  "description": "Ejemplo de producto",
-  "imageUrl": "http://localhost:8080/images/prueba.jpg"
-}
+{"ok":true,"status":"healthy","service":"api"}
+```
+
+### Nginx
+
+```bash
+curl http://localhost:8080
 ```
 
 ---
 
-## Pipeline CI/CD (Jenkins)
+# Pipeline CI/CD (Jenkins)
 
-La pipeline definida en `Jenkinsfile` contiene las siguientes etapas:
+La pipeline automatiza todo el proceso.
+
+## Etapas
 
 ### 1. Checkout
 
-Obtiene el código del repositorio.
-
-### 2. Build
-
-Construye la imagen Docker de la API.
-
-### 3. Test
-
-Levanta los servicios y verifica el endpoint `/health` con `curl`.
-
-### 4. Deploy
-
-Despliega el entorno completo con Docker Compose.
+Descarga el código desde GitHub.
 
 ---
+
+### 2. Prepare env
+
+Crea automáticamente el archivo `.env` dentro de Jenkins, ya que este archivo no se sube al repositorio.
+
+---
+
+### 3. Build
+
+Construye las imágenes Docker:
+
+```bash
+docker-compose build
+```
+
+Incluye:
+
+* API Node.js
+* Nginx personalizado
+
+---
+
+### 4. Test
+
+1. Limpia contenedores anteriores:
+
+```bash
+docker-compose down --remove-orphans
+```
+
+2. Levanta el entorno:
+
+```bash
+docker-compose up -d
+```
+
+3. Espera a que arranque:
+
+```bash
+sleep 10
+```
+
+4. Comprueba el estado de la API desde dentro del contenedor:
+
+```bash
+docker exec practica-api wget -qO- http://localhost:3000/health
+```
+
+---
+
+### 5. Deploy
+
+Despliega el entorno completo:
+
+```bash
+docker-compose up -d --build
+```
+
+---
+
+# Decisiones tomadas y dificultades encontradas
 
 ## Decisiones técnicas
 
-* Uso de Docker Compose para orquestación local.
-* Separación de servicios en contenedores independientes.
-* Uso de volúmenes para persistencia de datos (MongoDB y Nginx).
-* Variables de entorno para evitar configuración hardcodeada.
-* Endpoint `/health` para monitorización y pruebas automatizadas.
+* Uso de Docker Compose para orquestar servicios
+* Separación de servicios: API, MongoDB y Nginx
+* Creación de imagen personalizada de Nginx en lugar de usar volúmenes
+* Uso de Jenkins para automatizar build, test y deploy
+* Generación dinámica del `.env` en pipeline
 
 ---
 
-## Problemas encontrados
+## Dificultades encontradas
 
-* Configuración inicial de Docker Desktop.
-* Errores de compatibilidad en `docker-compose.yml`.
-* Gestión de redes entre contenedores.
-* Sincronización de servicios (API y MongoDB).
+### Jenkins sin Docker
+
+Error:
+
+```
+docker: not found
+```
+
+Solución:
+
+* Crear imagen personalizada de Jenkins con Docker instalado
+* Ejecutar Jenkins como root
+
+---
+
+### Permisos docker.sock
+
+Error:
+
+```
+permission denied while trying to connect to docker.sock
+```
+
+Solución:
+
+* Ejecutar Jenkins con:
+
+```bash
+--user root
+```
+
+---
+
+### Problema con rama
+
+Error:
+
+```
+couldn't find remote ref master
+```
+
+Solución:
+
+* Usar rama `main`
+
+---
+
+### Archivo .env no encontrado
+
+Error:
+
+```
+.env not found
+```
+
+Solución:
+
+* Generarlo dentro de la pipeline
+
+---
+
+### Conflictos de contenedores
+
+Error:
+
+```
+container name already in use
+```
+
+Solución:
+
+```bash
+docker-compose down --remove-orphans
+```
+
+---
+
+### Problema con volúmenes en Nginx
+
+Error:
+
+```
+not a directory / mounting error
+```
+
+Causa:
+
+* Jenkins está en Docker y no puede montar rutas locales
+
+Solución:
+
+* Crear Dockerfile propio de Nginx
+* Eliminar volúmenes
+
+---
+
+### Problema de conexión localhost
+
+Error:
+
+```
+curl localhost:3000 → failed
+```
+
+Causa:
+
+* Jenkins corre en contenedor
+* localhost no es la API
+
+Solución:
+
+```bash
+docker exec practica-api wget -qO- http://localhost:3000/health
+```
 
 ---
 
 ## Conclusión
 
-Se ha conseguido replicar una arquitectura completa en local sin depender de servicios externos, utilizando contenedores Docker y automatizando el despliegue mediante CI/CD.
+Se ha implementado un entorno completo con Docker y CI/CD con Jenkins, resolviendo problemas reales de:
+
+* Permisos en Docker
+* Redes entre contenedores
+* Ejecución de Jenkins en contenedor
+* Diferencias entre entorno local y entorno CI
 
 ---
-
-## Autor
-
-Ethan RS
-
-
-
 
 # AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa, por fin coño, joder que puto asco
 
