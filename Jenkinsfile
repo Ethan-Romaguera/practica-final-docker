@@ -23,13 +23,16 @@ EOF
 
         stage('Build') {
             steps {
-                echo 'Construyendo la imagen Docker de la API...'
-                sh 'docker-compose build api'
+                echo 'Construyendo imágenes Docker...'
+                sh 'docker-compose build'
             }
         }
 
         stage('Test') {
             steps {
+                echo 'Limpiando entorno anterior...'
+                sh 'docker-compose down --remove-orphans || true'
+
                 echo 'Levantando servicios para pruebas...'
                 sh 'docker-compose up -d'
 
