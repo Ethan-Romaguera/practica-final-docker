@@ -40,7 +40,7 @@ EOF
                 sh 'sleep 10'
 
                 echo 'Comprobando endpoint de salud...'
-                sh 'curl -f http://localhost:3000/health'
+                sh 'docker exec practica-api wget -qO- http://localhost:3000/health'
             }
         }
 
