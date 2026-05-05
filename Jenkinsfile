@@ -9,6 +9,18 @@ pipeline {
             }
         }
 
+        stage('Prepare env') {
+            steps {
+                echo 'Creando archivo .env para Jenkins...'
+                sh '''
+                    cat > .env <<EOF
+PORT=3000
+MONGO_URI=mongodb://mongo:27017/practica_final
+EOF
+                '''
+            }
+        }
+
         stage('Build') {
             steps {
                 echo 'Construyendo la imagen Docker de la API...'
